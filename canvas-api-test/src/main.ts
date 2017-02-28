@@ -3,44 +3,26 @@ window.onload = () => {
     var canvas = document.getElementById("app") as HTMLCanvasElement;
     var context2D = canvas.getContext("2d");
 
-
     var stage = new DisplayObjectContainer();
 
     setInterval(() => {
-        
+        context2D.save();
         context2D.clearRect(0, 0, canvas.width, canvas.height);
         stage.draw(context2D);
+        context2D.restore();
 
     }, 100)
 
-
     //文字
-    var text = new TextField();
-    text.x = 70;
-    text.y = 70;
-    text.text = "Jasper";
-    text.color = "#000000";
-    text.size = 100;
-    text.alpha = 0.1;
+    var name = new TextField();
+    name.x = 70;
+    name.y = 70;
+    name.text = "Evebus";
+    name.color = "#000000";
+    name.size = 100;
+    name.alpha = 1;
 
-    var text2 = new TextField();
-    text2.x = 70;
-    text2.y = 200;
-    text2.text = "Jack";
-    text2.color = "#000000";
-    text2.size = 100;
-    text2.alpha = 0.1;
-
-    var text3 = new TextField();
-    text3.x = 70;
-    text3.y = 300;
-    text3.text = "John";
-    text3.color = "#000000";
-    text3.size = 100;
-    text3.alpha = 0.1;
-
-
-
+/*
     var shape = new Shape();
     shape.graphics.beginFill("#000000");
 
@@ -57,10 +39,12 @@ window.onload = () => {
 
     shape.graphics.endFill();
     shape.scaleX = 0.5;
+*/
 
+    name.addEventListener(TouchEventType.MOUSE_TAP, ()=>{
+        name.text = "John";     
+    },this,false);
 
-    
-    
     //图片
     var image = document.createElement("img");
     image.src = "avater.jpg";
@@ -72,31 +56,185 @@ window.onload = () => {
         avater.x = 0;
         avater.width = 300;
         avater.height = 300;
-        avater.alpha = 0.5;
+        avater.alpha = 1;
 
-        var stage2 = new DisplayObjectContainer();
-        stage2.x = 300;
-        stage2.addChild(avater);
-        stage.x = 100;
-        stage.alpha = 1;
-        stage.addChild(text);
-        stage.addChild(stage2);
-        stage.addChild(text2);
-        stage.addChild(text3);
+        stage.touchable = true;
+        name.touchable = true;
+        avater.touchable = true;
         
-        stage.removeChild(text2);
-        shape.y = 100;
-        
-        stage.addChild(shape);
+        stage.addChild(avater);
+        stage.addChild(name);
+ 
+        avater.addEventListener(TouchEventType.MOUSE_MOVE, ()=>{
+        console.log("move");
+        let manager = Event_Manager.getInstance();
+        stage.y += manager.currentY - manager.lastY;
+
+        },this,false);
 
     }
+    
+    Event_Manager.eventManager = new Event_Manager();
+    Event_Manager.getWindow(window);
+    Event_Manager.getStage(stage);
+
+
+
+    Event_Manager.getInstance().onMouseDown();
+    Event_Manager.getInstance().onMouseMove();
+    Event_Manager.getInstance().onMouseUp();
+    
+
+
 
 }
 
-interface Drawable {
+interface Drawable { 
+    draw(context2D:CanvasRenderingContext2D); 
+}
+
+var TouchEventType = {
+
+    MOUSE_DOWN:0,
+    MOUSE_MOVE:1,
+    MOUSE_UP:2,
+    MOUSE_TAP:3
+
+}
+
+class Event_ {//基本事件
+    type:number = null;
+    ifCapture:boolean = false;
+    eventFunction:Function = null;
+    target:DisplayObject = null;
+
+    public constructor (type:number,eventFunction:Function,target:DisplayObject,ifCapture:boolean) {
+        this.type = type;
+        this.eventFunction = eventFunction;
+        this.target = target;
+        this.ifCapture = ifCapture;
+    }
+}
+
+class Event_Manager {//负责广播信息
+    displayObjcetArray:DisplayObject[] = [];
+    static eventManager : Event_Manager;
+
+    static getInstance(){
+        if(Event_Manager.eventManager == null){
+
+            Event_Manager.eventManager = new Event_Manager();
+            Event_Manager.eventManager.displayObjcetArray = new Array();
+            return Event_Manager.eventManager;
+
+        }else{
+
+            return Event_Manager.eventManager;
+        }
+    }
+
+    //记录位置
+    currentX:number = null;
+    currentY:number = null;
+    lastX:number = null;
+    lastY:number = null;
+
+    isMouseDown = false;//检测鼠标是否按下
+    hitResult : DisplayObject;//检测是否点到控件
+
+    window:Window = null;
+    stage:DisplayObjectContainer = null;
+
+    static getWindow(window:Window) {
+        Event_Manager.getInstance().window = window;
+    }
+
+    static getStage(stage:DisplayObjectContainer) {
+        Event_Manager.getInstance().stage = stage;
+    }
+
+    onMouseDown() {
+
+        let manager = Event_Manager.getInstance();
+        manager.window.onmousedown = (e) => {
+            manager.isMouseDown = true;
+            manager.displayObjcetArray.splice(0,manager.displayObjcetArray.length);
+            manager.hitResult = manager.stage.hitTest(e.offsetX, e.offsetY);
+            manager.currentX = e.offsetX;
+            manager.currentY = e.offsetY;
+        }
+    }
+
+    onMouseMove() {
+        
+        let manager = Event_Manager.getInstance();
+
+        manager.window.onmousemove = (e)=>{
+
+            if(manager.currentX == null) {
+                manager.currentX = e.offsetX;
+                manager.currentY = e.offsetY;
+                manager.lastX = manager.currentX;
+                manager.lastY = manager.currentY;  
+            }else {
+                manager.lastX = manager.currentX;
+                manager.lastY = manager.currentY;
+                manager.currentX = e.offsetX;
+                manager.currentY = e.offsetY;
+            }
+
+            if (manager.isMouseDown) {
+
+                //console.log("last X:" + manager.lastX);
+                //console.log("last Y:" + manager.lastY);
+
+                for (let i = 0; i < manager.displayObjcetArray.length; i++) {
+
+                    for (let event of manager.displayObjcetArray[i].eventList) {
+                    
+                        if (event.type == TouchEventType.MOUSE_MOVE && event.ifCapture) {
+
+                            event.eventFunction(e);
+                        }
+                    }
+                }
+
+                for (let i = (manager.displayObjcetArray.length - 1); i >= 0; i--) {
+
+                    for (let event of manager.displayObjcetArray[i].eventList) {
+
+                        if (event.type == TouchEventType.MOUSE_MOVE && !event.ifCapture) {
+
+                            event.eventFunction(e);
+                        }
+                    }   
+                }
+            }
+        }
+    }
+
+    onMouseUp() {
+        
+        let manager = Event_Manager.getInstance();
+        manager.window.onmouseup = (e)=>{
+
+            manager.isMouseDown = false;
+            manager.displayObjcetArray.splice(0,manager.displayObjcetArray.length);
+            let newHitRusult = manager.stage.hitTest(e.offsetX, e.offsetY)
+
+            for (let i = manager.displayObjcetArray.length - 1; i >= 0; i--) {
+
+                for (let event of manager.displayObjcetArray[i].eventList) {
+
+                    if (event.type == TouchEventType.MOUSE_TAP && newHitRusult == manager.hitResult ) {
+                        console.log("mouse up");
+                        event.eventFunction(e);
+                    }
+                }
+            }
+        }
+    }
     
-    draw(context2D:CanvasRenderingContext2D);
-    remove();
 
 }
 
@@ -111,13 +249,16 @@ class DisplayObject implements Drawable {
     matrix:math.Matrix = null;
     alpha:number = 1;
     globalAlpha = 1;
-    
+
+    eventList:Event_[] = [];
+
+    touchable:boolean = false;
 
     constructor() {
         this.matrix = new math.Matrix();
     }
 
-    remove() {
+    removeParent() {
         this.parent = null;
     }
 
@@ -145,33 +286,24 @@ class DisplayObject implements Drawable {
 
     }
 
+    hitTest(x:number,y:number):DisplayObject {
+        return null;
+    }
 
+    addEventListener(type : number, eventFunction : Function, target : DisplayObject, ifCapture : boolean){
+        
+        let e = new Event_(type, eventFunction, target, ifCapture);
+        this.eventList.push(e);
+    }
 
 }
 
-class DisplayObjectContainer implements Drawable {
+class DisplayObjectContainer extends DisplayObject {
     
-    x:number = 0;
-    y:number = 0;
-    scaleX:number = 1;
-    scaleY:number = 1;
-    rotation:number = 0;
-
-    matrix:math.Matrix = null;
-
-    alpha:number = 1;
-    globalAlpha:number = 1;
-    
-    parent:DisplayObjectContainer = null;
-
-    array:Drawable[] = [];
+    children:DisplayObject[] = [];
 
     constructor() {
-        this.matrix = new math.Matrix();
-    }
-
-    remove() {
-        this.parent = null;
+        super();
     }
 
     checkState() {
@@ -187,7 +319,7 @@ class DisplayObjectContainer implements Drawable {
 
     draw(context2D:CanvasRenderingContext2D) {
         this.checkState();
-        for (let drawable of this.array) {
+        for (let drawable of this.children) {
             drawable.draw(context2D);
         }
     }
@@ -196,23 +328,47 @@ class DisplayObjectContainer implements Drawable {
 
     }
 
+    hitTest(x,y):DisplayObject {
+        console.log("container");
+
+        if(!this.touchable){
+            console.log("container untouchable");
+            return null;
+        }
+
+        for(var i = this.children.length - 1; i >= 0; i--){
+
+            var child = this.children[i];
+            var pointBaseOnChild = math.pointAppendMatrix(new math.Point(x, y), math.invertMatrix(child.matrix));
+            var hitTestResult = child.hitTest(pointBaseOnChild.x, pointBaseOnChild.y);
+            
+            if(hitTestResult){
+                                
+                return hitTestResult;
+            }
+        }
+
+        console.log("all children untouchable");
+        return null;
+    }
+
     addChild(displayObject:DisplayObject){
 
         this.removeChild(displayObject);
-        this.array.push(displayObject);
+        this.children.push(displayObject);
         displayObject.parent = this;
         
     }
 
-    removeChild(child:Drawable) {
-        var tempArr = this.array.concat();
+    removeChild(child:DisplayObject) {
+        var tempArr = this.children.concat();
 
         for(let each of tempArr){
             if(each == child){
-                var index = this.array.indexOf(child);
+                var index = this.children.indexOf(child);
                 tempArr.splice(index,1);
-                this.array = tempArr;
-                child.remove();
+                this.children = tempArr;
+                child.removeParent();
                 break;
             }
         }
@@ -228,6 +384,7 @@ class Bitmap extends DisplayObject {
     width:number;
     height:number;
     src:string;
+    rect:math.Rectangle = null;
 
     constructor() {
         super();
@@ -235,12 +392,31 @@ class Bitmap extends DisplayObject {
 
 
     render(context2D:CanvasRenderingContext2D) {
-        //context2D.globalAlpha = this.alpha;
-        //context2D.drawImage(this.image,this.x,this.y,this.width,this.height);
-        context2D.drawImage(this.image,0,0,this.width,this.height);
-        //context2D.drawImage(this.image,this.matrix.tx,this.matrix.ty,this.width*this.matrix.b,this.height*this.matrix.c);
-        
+        context2D.drawImage(this.image,0,0,this.width,this.height);  
     }
+
+    hitTest(x,y):DisplayObject {
+
+        if(!this.touchable){
+            console.log("bitMap untouchable");
+            return null;
+        }
+
+        this.rect = new math.Rectangle(0,0,this.width,this.height);
+        var localHitPoint = new math.Point(x,y);
+        //var invertMatrix = math.invertMatrix(this.matrix);
+        //var pointAppendMatrix = math.pointAppendMatrix(hitPoint,invertMatrix);
+        if(this.rect.isPointInRectangle(localHitPoint)) {
+            console.log("hit bitMap");
+            if(this.eventList.length != 0){
+                Event_Manager.getInstance().displayObjcetArray.push(this);
+            }
+            return this;
+        } else {
+            return null;
+        }
+    }
+
 }
 
 class TextField extends DisplayObject {
@@ -249,18 +425,47 @@ class TextField extends DisplayObject {
     color:string = "";
     size:number = 40;
     font:string = "Arial";
+    rect:math.Rectangle = null;
 
     render(context2D:CanvasRenderingContext2D) {
+        this.rect = new math.Rectangle(0,-this.size,this.text.length*this.size/2,this.size);
         context2D.fillStyle = this.color;
         context2D.font = this.size +"px" + " " + this.font;
         context2D.fillText(this.text,0,0);
-        //console.log("alpha:" + this.alpha);
-        //console.log("globalAlpha:" + this.globalAlpha);
-        //字体颜色越来越深？
+
+    }
+
+    hitTest(x,y):DisplayObject {
+
+        if(!this.touchable){
+            console.log("textfield untouchable");
+            return null;
+        }
+
+        if(this.rect == null) {
+            this.rect = new math.Rectangle(0,-this.size,this.text.length*this.size/2,this.size);
+        }
+        var hitPoint = new math.Point(x,y);
+        //var invertMatrix = math.invertMatrix(this.matrix);
+        //var pointAppendMatrix = math.pointAppendMatrix(hitPoint,invertMatrix);
+        if(this.rect.isPointInRectangle(hitPoint)) {
+            console.log("hit textField");
+            if(this.eventList.length != 0){
+                Event_Manager.getInstance().displayObjcetArray.push(this);
+            }
+            return this;
+        }else{
+
+            return null;
+        }
     }
 
 }
 
+
+
+
+/*
 
 class Shape extends DisplayObject {
 
@@ -407,8 +612,36 @@ class LineInfo extends ShapeInfo {
  
 }
 
+*/
+
 
 module math {
+
+    export class Rectangle {
+
+        x = 0;
+        y = 0;
+        width = 1
+        height = 1;
+
+        public constructor(x,y,width,height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }   
+
+        isPointInRectangle(point:Point) {
+            let rect = this;
+            if(point.x < rect.x + rect.width  &&
+               point.y < rect.y + rect.height &&
+               point.x > rect.x &&
+               point.y > rect.y) {
+                return true;
+            }
+
+        }
+    }
 
 
     export class Point {

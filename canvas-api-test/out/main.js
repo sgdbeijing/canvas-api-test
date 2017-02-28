@@ -3,48 +3,46 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var _this = this;
 window.onload = function () {
     var canvas = document.getElementById("app");
     var context2D = canvas.getContext("2d");
     var stage = new DisplayObjectContainer();
     setInterval(function () {
+        context2D.save();
         context2D.clearRect(0, 0, canvas.width, canvas.height);
         stage.draw(context2D);
+        context2D.restore();
     }, 100);
     //文字
-    var text = new TextField();
-    text.x = 70;
-    text.y = 70;
-    text.text = "Evebus";
-    text.color = "#000000";
-    text.size = 100;
-    text.alpha = 0.1;
-    var text2 = new TextField();
-    text2.x = 70;
-    text2.y = 200;
-    text2.text = "Jury";
-    text2.color = "#000000";
-    text2.size = 100;
-    text2.alpha = 0.1;
-    var text3 = new TextField();
-    text3.x = 70;
-    text3.y = 300;
-    text3.text = "Zose";
-    text3.color = "#000000";
-    text3.size = 100;
-    text3.alpha = 0.1;
-    var shape = new Shape();
-    shape.graphics.beginFill("#000000");
-    shape.graphics.moveTo(200, 200);
-    shape.graphics.lineTo(100, 100);
-    shape.graphics.lineTo(0, 200);
-    shape.graphics.drawCircle(30, 30, 30);
-    shape.graphics.drawRect(50, 50, 100, 50);
-    shape.graphics.moveTo(0, 0);
-    shape.graphics.lineTo(100, 100);
-    shape.graphics.lineTo(200, 0);
-    shape.graphics.endFill();
-    shape.scaleX = 0.5;
+    var name = new TextField();
+    name.x = 70;
+    name.y = 70;
+    name.text = "Jasper";
+    name.color = "#000000";
+    name.size = 100;
+    name.alpha = 1;
+    /*
+        var shape = new Shape();
+        shape.graphics.beginFill("#000000");
+    
+        shape.graphics.moveTo(200,200);
+        shape.graphics.lineTo(100,100);
+        shape.graphics.lineTo(0,200);
+    
+        shape.graphics.drawCircle(30,30,30);
+        shape.graphics.drawRect(50,50,100,50);
+    
+        shape.graphics.moveTo(0,0);
+        shape.graphics.lineTo(100,100);
+        shape.graphics.lineTo(200,0);
+    
+        shape.graphics.endFill();
+        shape.scaleX = 0.5;
+    */
+    name.addEventListener(TouchEventType.MOUSE_TAP, function () {
+        name.text = "Mike";
+    }, _this, false);
     //图片
     var image = document.createElement("img");
     image.src = "avater.jpg";
@@ -54,21 +52,138 @@ window.onload = function () {
         avater.x = 0;
         avater.width = 300;
         avater.height = 300;
-        avater.alpha = 0.5;
-        var stage2 = new DisplayObjectContainer();
-        stage2.x = 300;
-        stage2.addChild(avater);
-        stage.x = 100;
-        stage.alpha = 1;
-        stage.addChild(text);
-        stage.addChild(stage2);
-        stage.addChild(text2);
-        stage.addChild(text3);
-        stage.removeChild(text2);
-        shape.y = 100;
-        stage.addChild(shape);
+        avater.alpha = 1;
+        stage.touchable = true;
+        name.touchable = true;
+        avater.touchable = true;
+        stage.addChild(avater);
+        stage.addChild(name);
+        avater.addEventListener(TouchEventType.MOUSE_MOVE, function () {
+            console.log("move");
+            var manager = Event_Manager.getInstance();
+            stage.y += manager.currentY - manager.lastY;
+        }, _this, false);
     };
+    Event_Manager.eventManager = new Event_Manager();
+    Event_Manager.getWindow(window);
+    Event_Manager.getStage(stage);
+    Event_Manager.getInstance().onMouseDown();
+    Event_Manager.getInstance().onMouseMove();
+    Event_Manager.getInstance().onMouseUp();
 };
+var TouchEventType = {
+    MOUSE_DOWN: 0,
+    MOUSE_MOVE: 1,
+    MOUSE_UP: 2,
+    MOUSE_TAP: 3
+};
+var Event_ = (function () {
+    function Event_(type, eventFunction, target, ifCapture) {
+        this.type = null;
+        this.ifCapture = false;
+        this.eventFunction = null;
+        this.target = null;
+        this.type = type;
+        this.eventFunction = eventFunction;
+        this.target = target;
+        this.ifCapture = ifCapture;
+    }
+    return Event_;
+}());
+var Event_Manager = (function () {
+    function Event_Manager() {
+        this.displayObjcetArray = [];
+        //记录位置
+        this.currentX = null;
+        this.currentY = null;
+        this.lastX = null;
+        this.lastY = null;
+        this.isMouseDown = false; //检测鼠标是否按下
+        this.window = null;
+        this.stage = null;
+    }
+    Event_Manager.getInstance = function () {
+        if (Event_Manager.eventManager == null) {
+            Event_Manager.eventManager = new Event_Manager();
+            Event_Manager.eventManager.displayObjcetArray = new Array();
+            return Event_Manager.eventManager;
+        }
+        else {
+            return Event_Manager.eventManager;
+        }
+    };
+    Event_Manager.getWindow = function (window) {
+        Event_Manager.getInstance().window = window;
+    };
+    Event_Manager.getStage = function (stage) {
+        Event_Manager.getInstance().stage = stage;
+    };
+    Event_Manager.prototype.onMouseDown = function () {
+        var manager = Event_Manager.getInstance();
+        manager.window.onmousedown = function (e) {
+            manager.isMouseDown = true;
+            manager.displayObjcetArray.splice(0, manager.displayObjcetArray.length);
+            manager.hitResult = manager.stage.hitTest(e.offsetX, e.offsetY);
+            manager.currentX = e.offsetX;
+            manager.currentY = e.offsetY;
+        };
+    };
+    Event_Manager.prototype.onMouseMove = function () {
+        var manager = Event_Manager.getInstance();
+        manager.window.onmousemove = function (e) {
+            if (manager.currentX == null) {
+                manager.currentX = e.offsetX;
+                manager.currentY = e.offsetY;
+                manager.lastX = manager.currentX;
+                manager.lastY = manager.currentY;
+            }
+            else {
+                manager.lastX = manager.currentX;
+                manager.lastY = manager.currentY;
+                manager.currentX = e.offsetX;
+                manager.currentY = e.offsetY;
+            }
+            if (manager.isMouseDown) {
+                //console.log("last X:" + manager.lastX);
+                //console.log("last Y:" + manager.lastY);
+                for (var i = 0; i < manager.displayObjcetArray.length; i++) {
+                    for (var _i = 0, _a = manager.displayObjcetArray[i].eventList; _i < _a.length; _i++) {
+                        var event_1 = _a[_i];
+                        if (event_1.type == TouchEventType.MOUSE_MOVE && event_1.ifCapture) {
+                            event_1.eventFunction(e);
+                        }
+                    }
+                }
+                for (var i = (manager.displayObjcetArray.length - 1); i >= 0; i--) {
+                    for (var _b = 0, _c = manager.displayObjcetArray[i].eventList; _b < _c.length; _b++) {
+                        var event_2 = _c[_b];
+                        if (event_2.type == TouchEventType.MOUSE_MOVE && !event_2.ifCapture) {
+                            event_2.eventFunction(e);
+                        }
+                    }
+                }
+            }
+        };
+    };
+    Event_Manager.prototype.onMouseUp = function () {
+        var manager = Event_Manager.getInstance();
+        manager.window.onmouseup = function (e) {
+            manager.isMouseDown = false;
+            manager.displayObjcetArray.splice(0, manager.displayObjcetArray.length);
+            var newHitRusult = manager.stage.hitTest(e.offsetX, e.offsetY);
+            for (var i = manager.displayObjcetArray.length - 1; i >= 0; i--) {
+                for (var _i = 0, _a = manager.displayObjcetArray[i].eventList; _i < _a.length; _i++) {
+                    var event_3 = _a[_i];
+                    if (event_3.type == TouchEventType.MOUSE_TAP && newHitRusult == manager.hitResult) {
+                        console.log("mouse up");
+                        event_3.eventFunction(e);
+                    }
+                }
+            }
+        };
+    };
+    return Event_Manager;
+}());
 var DisplayObject = (function () {
     function DisplayObject() {
         this.x = 0;
@@ -80,9 +195,11 @@ var DisplayObject = (function () {
         this.matrix = null;
         this.alpha = 1;
         this.globalAlpha = 1;
+        this.eventList = [];
+        this.touchable = false;
         this.matrix = new math.Matrix();
     }
-    DisplayObject.prototype.remove = function () {
+    DisplayObject.prototype.removeParent = function () {
         this.parent = null;
     };
     DisplayObject.prototype.checkState = function () {
@@ -103,25 +220,21 @@ var DisplayObject = (function () {
     };
     DisplayObject.prototype.render = function (context2D) {
     };
+    DisplayObject.prototype.hitTest = function (x, y) {
+        return null;
+    };
+    DisplayObject.prototype.addEventListener = function (type, eventFunction, target, ifCapture) {
+        var e = new Event_(type, eventFunction, target, ifCapture);
+        this.eventList.push(e);
+    };
     return DisplayObject;
 }());
-var DisplayObjectContainer = (function () {
+var DisplayObjectContainer = (function (_super) {
+    __extends(DisplayObjectContainer, _super);
     function DisplayObjectContainer() {
-        this.x = 0;
-        this.y = 0;
-        this.scaleX = 1;
-        this.scaleY = 1;
-        this.rotation = 0;
-        this.matrix = null;
-        this.alpha = 1;
-        this.globalAlpha = 1;
-        this.parent = null;
-        this.array = [];
-        this.matrix = new math.Matrix();
+        _super.call(this);
+        this.children = [];
     }
-    DisplayObjectContainer.prototype.remove = function () {
-        this.parent = null;
-    };
     DisplayObjectContainer.prototype.checkState = function () {
         this.matrix.updateFromDisplayObject(this.x, this.y, this.scaleX, this.scaleY, this.rotation);
         if (this.parent) {
@@ -134,44 +247,79 @@ var DisplayObjectContainer = (function () {
     };
     DisplayObjectContainer.prototype.draw = function (context2D) {
         this.checkState();
-        for (var _i = 0, _a = this.array; _i < _a.length; _i++) {
+        for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
             var drawable = _a[_i];
             drawable.draw(context2D);
         }
     };
     DisplayObjectContainer.prototype.render = function () {
     };
+    DisplayObjectContainer.prototype.hitTest = function (x, y) {
+        console.log("container");
+        if (!this.touchable) {
+            console.log("container untouchable");
+            return null;
+        }
+        for (var i = this.children.length - 1; i >= 0; i--) {
+            var child = this.children[i];
+            var pointBaseOnChild = math.pointAppendMatrix(new math.Point(x, y), math.invertMatrix(child.matrix));
+            var hitTestResult = child.hitTest(pointBaseOnChild.x, pointBaseOnChild.y);
+            if (hitTestResult) {
+                return hitTestResult;
+            }
+        }
+        console.log("all children untouchable");
+        return null;
+    };
     DisplayObjectContainer.prototype.addChild = function (displayObject) {
         this.removeChild(displayObject);
-        this.array.push(displayObject);
+        this.children.push(displayObject);
         displayObject.parent = this;
     };
     DisplayObjectContainer.prototype.removeChild = function (child) {
-        var tempArr = this.array.concat();
+        var tempArr = this.children.concat();
         for (var _i = 0, tempArr_1 = tempArr; _i < tempArr_1.length; _i++) {
             var each = tempArr_1[_i];
             if (each == child) {
-                var index = this.array.indexOf(child);
+                var index = this.children.indexOf(child);
                 tempArr.splice(index, 1);
-                this.array = tempArr;
-                child.remove();
+                this.children = tempArr;
+                child.removeParent();
                 break;
             }
         }
     };
     return DisplayObjectContainer;
-}());
+}(DisplayObject));
 var Bitmap = (function (_super) {
     __extends(Bitmap, _super);
     function Bitmap() {
         _super.call(this);
         this.image = null;
+        this.rect = null;
     }
     Bitmap.prototype.render = function (context2D) {
-        //context2D.globalAlpha = this.alpha;
-        //context2D.drawImage(this.image,this.x,this.y,this.width,this.height);
         context2D.drawImage(this.image, 0, 0, this.width, this.height);
-        //context2D.drawImage(this.image,this.matrix.tx,this.matrix.ty,this.width*this.matrix.b,this.height*this.matrix.c);
+    };
+    Bitmap.prototype.hitTest = function (x, y) {
+        if (!this.touchable) {
+            console.log("bitMap untouchable");
+            return null;
+        }
+        this.rect = new math.Rectangle(0, 0, this.width, this.height);
+        var localHitPoint = new math.Point(x, y);
+        //var invertMatrix = math.invertMatrix(this.matrix);
+        //var pointAppendMatrix = math.pointAppendMatrix(hitPoint,invertMatrix);
+        if (this.rect.isPointInRectangle(localHitPoint)) {
+            console.log("hit bitMap");
+            if (this.eventList.length != 0) {
+                Event_Manager.getInstance().displayObjcetArray.push(this);
+            }
+            return this;
+        }
+        else {
+            return null;
+        }
     };
     return Bitmap;
 }(DisplayObject));
@@ -183,123 +331,211 @@ var TextField = (function (_super) {
         this.color = "";
         this.size = 40;
         this.font = "Arial";
+        this.rect = null;
     }
     TextField.prototype.render = function (context2D) {
+        this.rect = new math.Rectangle(0, -this.size, this.text.length * this.size / 2, this.size);
         context2D.fillStyle = this.color;
         context2D.font = this.size + "px" + " " + this.font;
         context2D.fillText(this.text, 0, 0);
-        //console.log("alpha:" + this.alpha);
-        //console.log("globalAlpha:" + this.globalAlpha);
-        //字体颜色越来越深？
+    };
+    TextField.prototype.hitTest = function (x, y) {
+        if (!this.touchable) {
+            console.log("textfield untouchable");
+            return null;
+        }
+        if (this.rect == null) {
+            this.rect = new math.Rectangle(0, -this.size, this.text.length * this.size / 2, this.size);
+        }
+        var hitPoint = new math.Point(x, y);
+        //var invertMatrix = math.invertMatrix(this.matrix);
+        //var pointAppendMatrix = math.pointAppendMatrix(hitPoint,invertMatrix);
+        if (this.rect.isPointInRectangle(hitPoint)) {
+            console.log("hit textField");
+            if (this.eventList.length != 0) {
+                Event_Manager.getInstance().displayObjcetArray.push(this);
+            }
+            return this;
+        }
+        else {
+            return null;
+        }
     };
     return TextField;
 }(DisplayObject));
-var Shape = (function (_super) {
-    __extends(Shape, _super);
-    function Shape() {
-        _super.call(this);
-        this.graphics = new Graphics();
+/*
+
+class Shape extends DisplayObject {
+
+    graphics = new Graphics();
+    
+    public constructor() {
+        super();
     }
-    Shape.prototype.render = function (context2D) {
-        for (var _i = 0, _a = this.graphics.shapeInfo; _i < _a.length; _i++) {
-            var info = _a[_i];
+
+    render(context2D:CanvasRenderingContext2D) {
+        
+        for(let info of this.graphics.shapeInfo){
             context2D.fillStyle = this.graphics.color;
             context2D.globalAlpha = info.alpha;
-            switch (info.type) {
+
+            switch(info.type) {
+
                 case ShapeType.LINE:
-                    context2D.moveTo(info.x, info.y);
-                    context2D.lineTo(info.endx, info.endy);
+                    context2D.moveTo(info.x,info.y);
+                    context2D.lineTo(info.endx,info.endy);
                     context2D.stroke();
                     break;
+
                 case ShapeType.RECT:
-                    context2D.fillRect(info.x, info.y, info.width, info.height);
+                    context2D.fillRect(info.x,info.y,info.width,info.height);
                     break;
+                
                 case ShapeType.CIRCLE:
                     context2D.beginPath();
-                    context2D.arc(info.x, info.y, info.radius, 0, Math.PI * 2, true);
+                    context2D.arc(info.x,info.y,info.radius,0,Math.PI*2,true);
                     context2D.closePath();
                     context2D.fill();
                     break;
+
             }
         }
-    };
-    return Shape;
-}(DisplayObject));
+        
+        
+    }
+
+    
+
+}
+
 var ShapeType = {
-    LINE: 0,
-    RECT: 1,
-    CIRCLE: 2
-};
-var Graphics = (function () {
-    function Graphics() {
-        this.color = "";
-        this.shapeInfo = [];
-    }
-    Graphics.prototype.beginFill = function (color) {
+
+    LINE:0,
+    RECT:1,
+    CIRCLE:2
+ 
+}
+
+class Graphics {
+
+    _x:number;
+    _y:number;
+
+    color:string = "";
+    shapeInfo:ShapeInfo[] = [];
+
+    public beginFill(color:string) {
         this.color = color;
-    };
-    Graphics.prototype.endFill = function () {
-    };
-    Graphics.prototype.drawCircle = function (x, y, radius) {
-        this.shapeInfo.push(new CircleInfo(x, y, radius));
-    };
-    Graphics.prototype.drawRect = function (x, y, width, height) {
-        this.shapeInfo.push(new RectInfo(x, y, width, height));
-    };
-    Graphics.prototype.lineTo = function (x, y) {
-        this.shapeInfo.push(new LineInfo(this._x, this._y, x, y));
-        this._x = x;
-        this._y = y;
-    };
-    Graphics.prototype.moveTo = function (x, y) {
-        this._x = x;
-        this._y = y;
-    };
-    return Graphics;
-}());
-var ShapeInfo = (function () {
-    function ShapeInfo() {
-        this.alpha = 1;
     }
-    return ShapeInfo;
-}());
-var CircleInfo = (function (_super) {
-    __extends(CircleInfo, _super);
-    function CircleInfo(x, y, radius) {
-        _super.call(this);
-        this.type = ShapeType.CIRCLE;
+
+    public endFill() {
+
+    }
+
+    public drawCircle(x:number,y:number,radius:number) {
+
+        this.shapeInfo.push(new CircleInfo(x,y,radius));
+    }
+
+    public drawRect(x:number,y:number,width:number,height:number) {
+
+        this.shapeInfo.push(new RectInfo(x,y,width,height));
+    }
+
+    public lineTo(x:number,y:number) {
+        this.shapeInfo.push(new LineInfo(this._x,this._y,x,y));
+        this._x = x;
+        this._y = y;
+    }
+
+    public moveTo(x:number,y:number) {
+        this._x = x;
+        this._y = y;
+    }
+
+
+}
+
+class ShapeInfo {
+    type:number;
+    x:number;
+    y:number;
+    alpha:number = 1;
+    
+    radius:number;
+    width:number;
+    height:number;
+       
+    endx:number;
+    endy:number;
+}
+
+class CircleInfo extends ShapeInfo {
+    type = ShapeType.CIRCLE;
+
+    public constructor(x:number,y:number,radius:number) {
+        super();
         this.x = x;
         this.y = y;
         this.radius = radius;
     }
-    return CircleInfo;
-}(ShapeInfo));
-var RectInfo = (function (_super) {
-    __extends(RectInfo, _super);
-    function RectInfo(x, y, width, height) {
-        _super.call(this);
-        this.type = ShapeType.RECT;
+
+}
+
+class RectInfo extends ShapeInfo {
+    type = ShapeType.RECT;
+
+    public constructor(x:number,y:number,width:number,height:number) {
+        super();
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
     }
-    return RectInfo;
-}(ShapeInfo));
-var LineInfo = (function (_super) {
-    __extends(LineInfo, _super);
-    function LineInfo(_x, _y, x, y) {
-        _super.call(this);
-        this.type = ShapeType.LINE;
+
+
+}
+
+class LineInfo extends ShapeInfo {
+    type = ShapeType.LINE;
+
+    public constructor(_x:number,_y:number,x:number,y:number) {
+        super();
         this.x = _x;
         this.y = _y;
         this.endx = x;
         this.endy = y;
+      
     }
-    return LineInfo;
-}(ShapeInfo));
+ 
+}
+
+*/
 var math;
 (function (math) {
+    var Rectangle = (function () {
+        function Rectangle(x, y, width, height) {
+            this.x = 0;
+            this.y = 0;
+            this.width = 1;
+            this.height = 1;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+        Rectangle.prototype.isPointInRectangle = function (point) {
+            var rect = this;
+            if (point.x < rect.x + rect.width &&
+                point.y < rect.y + rect.height &&
+                point.x > rect.x &&
+                point.y > rect.y) {
+                return true;
+            }
+        };
+        return Rectangle;
+    }());
+    math.Rectangle = Rectangle;
     var Point = (function () {
         function Point(x, y) {
             this.x = x;
